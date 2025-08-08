@@ -124,7 +124,7 @@ window.onload = function () {
       pin: form.pin.value.trim()
     };
     try {
-      await fetch("https://script.google.com/macros/library/d/1avMjEginwQeHHer2Vji_Cjt8SAo7zGWpiAkfND-ELu1aNqiEelCQSi8p/2", {
+      await fetch("https://script.google.com/macros/s/AKfycby469L_pyQeR_64h1CY3XV5sXoeK1sgEVZQkoaFkjp0809rG89ZLugr4X1o1IaU4Dsu9w/exec", {
         method:'POST', mode:'no-cors',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify(payload)
