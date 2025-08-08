@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Передача показаний воды</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f6f7fb; margin: 0; }
+    header { padding: 20px; background: #fff; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; }
+    h1 { margin: 0; font-size: 20px; }
+    select { padding: 4px; }
+    main { max-width: 600px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 8px; }
+    label { display: block; margin-top: 10px; }
+    input { width: 100%; padding: 8px; margin-top: 4px; }
+    button { margin-top: 15px; padding: 10px 15px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="title"></h1>
+    <select id="lang">
+      <option value="ru">Рус</option>
+      <option value="lv">Lat</option>
+      <option value="en">Eng</option>
+    </select>
+  </header>
+  <main>
+    <div id="subtitle"></div>
+    <form id="form">
+      <label id="labelFlat" for="flat"></label>
+      <input id="flat" name="flat" type="number" required />
+
+      <input id="clientCode" name="clientCode" type="hidden" />
+
+      <label id="labelPeriod" for="date"></label>
+      <input id="date" name="date" type="month" required />
+
+      <label id="labelCold" for="cold"></label>
+      <input id="cold" name="cold" type="text" inputmode="decimal" pattern="^\\d{1,6}([\\.,]\\d{1,3})?$" required />
+
+      <label id="labelHot" for="hot"></label>
+      <input id="hot" name="hot" type="text" inputmode="decimal" pattern="^\\d{1,6}([\\.,]\\d{1,3})?$" required />
+
+      <label id="labelContact" for="contact"></label>
+      <input id="contact" name="contact" type="text" />
+
+      <label id="labelPin" for="pin"></label>
+      <input id="pin" name="pin" type="password" required />
+      <div id="pinNote" style="font-size:12px;color:#555;"></div>
+
+      <button type="submit" id="btnSend"></button>
+      <button type="reset" id="btnClear"></button>
+    </form>
+    <div id="msg" style="margin-top:10px;color:green;"></div>
+    <footer id="footer" style="margin-top:10px;font-size:12px;color:#555;"></footer>
+  </main>
+
+<script>
+const translations = {
+  ru: { title:"Передача показаний воды", subtitle:"Для жителей дома. Заполните форму и нажмите «Отправить».", flat:"Квартира", period:"Период", cold:"ХВС — показание счётчика (м³)", hot:"ГВС — показание счётчика (м³)", contact:"Контакт (e-mail/тел.)", pin:"Код квартиры (PIN)", pinNote:"Простой доступ по коду: защитит от спама и посторонних.", send:"Отправить", clear:"Очистить", footer:"Отправляя форму, вы соглашаетесь на обработку данных.", success:"Спасибо! Показания отправлены.", error:"Ошибка отправки." },
+  lv: { title:"Ūdens skaitītāju rādījumu iesniegšana", subtitle:"Daudzdzīvokļu mājas iedzīvotājiem. Aizpildiet formu un nospiediet 'Nosūtīt'.", flat:"Dzīvoklis", period:"Periods", cold:"Aukstā ūdens skaitītāja rādījums (m³)", hot:"Karstā ūdens skaitītāja rādījums (m³)", contact:"Kontakts (e-pasts/tālrunis)", pin:"Dzīvokļa kods (PIN)", pinNote:"Vienkārša piekļuve ar kodu: aizsargā no spama un svešiniekiem.", send:"Nosūtīt", clear:"Notīrīt", footer:"Iesniedzot formu, jūs piekrītat datu apstrādei.", success:"Paldies! Rādījumi nosūtīti.", error:"Sūtīšanas kļūda." },
+  en: { title:"Water Meter Reading Submission", subtitle:"For building residents. Fill out the form and click 'Submit'.", flat:"Apartment", period:"Period", cold:"Cold water meter reading (m³)", hot:"Hot water meter reading (m³)", contact:"Contact (email/phone)", pin:"Apartment code (PIN)", pinNote:"Simple code access: protects from spam and outsiders.", send:"Submit", clear:"Clear", footer:"By submitting this form, you agree to the processing of data.", success:"Thank you! Your readings have been submitted.", error:"Submission error." }
+};
+
+function setLang(l){
+  const t = translations[l];
+  document.getElementById('title').textContent = t.title;
+  document.getElementById('subtitle').textContent = t.subtitle;
+  document.getElementById('labelFlat').textContent = t.flat;
+  document.getElementById('labelPeriod').textContent = t.period;
+  document.getElementById('labelCold').textContent = t.cold;
+  document.getElementById('labelHot').textContent = t.hot;
+  document.getElementById('labelContact').textContent = t.contact;
+  document.getElementById('labelPin').textContent = t.pin;
+  document.getElementById('pinNote').textContent = t.pinNote;
+  document.getElementById('btnSend').textContent = t.send;
+  document.getElementById('btnClear').textContent = t.clear;
+  document.getElementById('footer').textContent = t.footer;
+}
+
+const langSel = document.getElementById('lang');
+langSel.addEventListener('change', ()=>{
+  setLang(langSel.value);
+  localStorage.setItem('lang', langSel.value);
+});
+setLang(localStorage.getItem('lang')||'ru');
+langSel.value = localStorage.getItem('lang')||'ru';
+
+// Генерация кода клиента
+const flatInput = document.getElementById('flat');
+const codeInput = document.getElementById('clientCode');
+flatInput.addEventListener('input', () => {
+  const num = flatInput.value.trim();
+  codeInput.value = num ? `M5-${num}` : '';
+});
+
+function normalizeReading(v){ return String(v).replace(/\\s+/g,'').replace(',', '.'); }
+
+const form = document.getElementById('form');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const cold = normalizeReading(form.cold.value);
+  const hot = normalizeReading(form.hot.value);
+  const payload = {
+    flat: form.flat.value.trim(),
+    date: form.date.value,
+    cold,
+    hot,
+    clientCode: form.clientCode.value.trim(),
+    contact: form.contact.value.trim(),
+    pin: form.pin.value.trim()
+  };
+  try {
+    await fetch(\"__PASTE_YOUR_GAS_WEBAPP_URL_HERE__\", { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    document.getElementById('msg').textContent = translations[langSel.value].success;
+    form.reset();
+  } catch {
+    document.getElementById('msg').textContent = translations[langSel.value].error;
+  }
+});
+</script>
+</body>
+</html>
